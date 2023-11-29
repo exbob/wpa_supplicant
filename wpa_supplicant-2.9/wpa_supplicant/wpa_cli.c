@@ -221,6 +221,44 @@ static void wpa_cli_msg_cb(char *msg, size_t len)
 	printf("%s\n", msg);
 }
 
+static int str2utf8(char *buf, size_t len)
+{
+    char *tmp;
+    int buf_i = 0;
+    int tmp_i = 0;
+    char hexnum[3] = "00";
+    int num = 0;
+
+    tmp = malloc(len + 1);
+    memset(tmp, '\0', len + 1);
+
+    while (buf_i < len)
+    {
+        if (*(buf + buf_i) == '\\' && *(buf + buf_i + 1) == 'x')
+        {
+            buf_i += 2;
+            hexnum[0] = *(buf + buf_i);
+            hexnum[1] = *(buf + buf_i + 1);
+            hexnum[2] = '\0';
+            sscanf(hexnum, "%x", &num);
+            *(tmp + tmp_i) = (num == 0) ? 0x20 : num;
+
+            buf_i += 2;
+            tmp_i++;
+        }
+        else
+        {
+            *(tmp + tmp_i) = *(buf + buf_i);
+            buf_i++;
+            tmp_i++;
+        }
+    }
+
+    memcpy(buf, tmp, len + 1);
+    free(tmp);
+
+    return tmp_i;
+}
 
 static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, const char *cmd, int print)
 {
@@ -250,6 +288,9 @@ static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, const char *cmd, int print)
 	}
 	if (print) {
 		buf[len] = '\0';
+
+		len = str2utf8(buf, len);
+
 		printf("%s", buf);
 		if (interactive && len > 0 && buf[len - 1] != '\n')
 			printf("\n");
